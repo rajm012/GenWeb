@@ -34,14 +34,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </SidebarProvider>
           </ThemeProvider>
-          <div className="absolute top-4 right-4 flex gap-4">
+          {/* <div className="absolute top-4 right-4 flex gap-4">
             <SignedOut>
               <Button><SignInButton /></Button>
             </SignedOut>
             <SignedIn>
               <UserButton />
             </SignedIn>
-          </div>
+          </div> */}
         </body>
       </html>
     </ClerkProvider>

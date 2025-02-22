@@ -5,10 +5,41 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Bot, Code2, Copy, ExternalLink, Loader2, Play, Send } from "lucide-react"
+import { Sidebar } from "@/components/sidebar"
+import { useUser } from "@clerk/nextjs"
+
+// Type definitions
+interface GeneratedFiles {
+  html: string;
+  css: string;
+  js: string;
+}
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  code?: boolean;
+  files?: GeneratedFiles;
+}
+
+interface ProjectData {
+  projectName: string;
+  files: {
+    "index.html": string;
+    "style.css": string;
+    "script.js": string;
+  };
+}
+
+interface AIResponse {
+  response: string;
+  status: number;
+}
 
 export default function Page() {
-  const [loading, setLoading] = React.useState(false)
-  const [messages, setMessages] = React.useState<{ role: "user" | "assistant"; content: string; code?: boolean }[]>([
+  const { user, isSignedIn } = useUser()
+  const [loading, setLoading] = React.useState<boolean>(false)
+  const [messages, setMessages] = React.useState<Message[]>([
     {
       role: "assistant",
       content:
@@ -16,36 +47,169 @@ export default function Page() {
     },
   ])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const form = e.target as HTMLFormElement
-    const input = form.elements.namedItem("message") as HTMLTextAreaElement
-    const message = input.value.trim()
+  const saveProject = async (prompt: string, files: GeneratedFiles): Promise<void> => {
+    try {
+      const projectData: ProjectData = {
+        projectName: prompt,
+        files: {
+          "index.html": files.html || "",
+          "style.css": files.css || "",
+          "script.js": files.js || "",
+        },
+      }
 
-    if (message) {
-      setLoading(true)
-      setMessages((prev) => [...prev, { role: "user", content: message }])
-      // Simulate AI response
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "I've generated your website based on your description. Here's the code:",
-            code: true,
-          },
-        ])
-        setLoading(false)
-      }, 2000)
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(projectData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save project")
+      }
+    } catch (error) {
+      console.error("Error saving project:", error)
+    }
+  }
+
+  // Updated code extraction function with better error handling and type checking
+  const extractCode = (response: string, type: 'html' | 'css' | 'javascript'): string => {
+    if (!response || typeof response !== 'string') {
+      console.error(`Invalid response for ${type} code extraction:`, response);
+      return `/* No ${type} code available */`;
+    }
+  
+    try {
+      let responseText: string;
+  
+      // Try parsing JSON if response is a JSON string
+      try {
+        const parsedResponse = JSON.parse(response);
+        responseText = typeof parsedResponse.response === 'string' ? parsedResponse.response : response;
+      } catch {
+        responseText = response;
+      }
+  
+      // Language mappings for easier identification
+      const languageMap: Record<typeof type, string[]> = {
+        html: ['html'],
+        css: ['css'],
+        javascript: ['javascript', 'js']
+      };
+  
+      const languages = languageMap[type] || [type];
+      const languagePattern = languages.join('|');
+  
+      // Match fenced code blocks with the correct language
+      const codeBlockPattern = new RegExp(`\`\`\`(?:${languagePattern})\\s*\\n([\\s\\S]*?)\\n\`\`\``, 'gi');
+      const matches = [...responseText.matchAll(codeBlockPattern)].map(match => match[1].trim());
+  
+      if (matches.length > 0) {
+        return matches.join('\n\n');
+      }
+  
+      // Match generic code blocks without a specified language
+      const fallbackPattern = /\`\`\`\s*\n([\s\S]*?)\n\`\`\`/g;
+      const fallbackMatches = [...responseText.matchAll(fallbackPattern)].map(match => match[1].trim());
+  
+      if (fallbackMatches.length > 0) {
+        return fallbackMatches.join('\n\n');
+      }
+  
+      // Last resort: Attempt inline code extraction based on structure
+      if (type === 'html') {
+        const htmlMatches = [...responseText.matchAll(/<[^>]+>[\s\S]*?<\/[^>]+>/gm)].map(match => match[0].trim());
+        if (htmlMatches.length > 0) return htmlMatches.join('\n\n');
+      }
+  
+      if (type === 'css') {
+        const cssMatches = [...responseText.matchAll(/[.#]?[\w-]+\s*{[\s\S]*?}/gm)].map(match => match[0].trim());
+        if (cssMatches.length > 0) return cssMatches.join('\n\n');
+      }
+  
+      if (type === 'javascript') {
+        const jsMatches = [...responseText.matchAll(/(?:function|const|let|var|class)\s+[\w$]+\s*.*?{[\s\S]*?}/gm)].map(match => match[0].trim());
+        if (jsMatches.length > 0) return jsMatches.join('\n\n');
+      }
+  
+      console.warn(`No ${type} code block found in response`);
+      return `/* No ${type} code block found */`;
+    } catch (error) {
+      console.error(`Error extracting ${type} code:`, error);
+      return `/* Error extracting ${type} code: ${String(error)} */`;
+    }
+  };
+  
+
+// Update handleSubmit function to handle the response format
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  e.preventDefault()
+  const form = e.target as HTMLFormElement
+  const input = form.elements.namedItem("message") as HTMLTextAreaElement
+  const message = input.value.trim()
+
+  if (message && isSignedIn) {
+    setLoading(true)
+    setMessages((prev) => [...prev, { role: "user", content: message }])
+
+    try {
+      const response = await fetch("/api/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userInput: message }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch response")
+      }
+
+      const data: AIResponse = await response.json()
+      
+      // Extract code snippets with the updated function
+      const generatedFiles: GeneratedFiles = {
+        html: extractCode(JSON.stringify(data), "html"),
+        css: extractCode(JSON.stringify(data), "css"),
+        js: extractCode(JSON.stringify(data), "javascript")
+      }
+
+      // Save the project
+      await saveProject(message, generatedFiles)
+
+      // Add the AI response to messages with both the explanation and code
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: typeof data.response === 'string' ? data.response.split('```')[0] : "Here's the generated code:",
+          code: true,
+          files: generatedFiles
+        },
+      ])
+    } catch (error) {
+      console.error("Error:", error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `Sorry, I encountered an error while generating your website: ${error}. Please try again.`,
+        },
+      ])
+    } finally {
+      setLoading(false)
       input.value = ""
     }
   }
+}
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
       <div className="flex flex-1 flex-col">
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="mx-auto max-w-4xl space-y-8">
+          <div className="space-y-8">
             {messages.map((message, i) => (
               <div key={i} className="space-y-4">
                 <div className={`flex gap-3 ${message.role === "assistant" ? "flex-row" : "flex-row-reverse"}`}>
@@ -69,7 +233,7 @@ export default function Page() {
                   </div>
                 </div>
 
-                {message.code && (
+                {message.code && message.files && (
                   <div className="ml-11">
                     <Tabs defaultValue="html" className="rounded-lg border bg-background/50 p-4 backdrop-blur-sm">
                       <div className="mb-4 flex items-center justify-between">
@@ -95,39 +259,17 @@ export default function Page() {
                       </div>
                       <TabsContent value="html" className="mt-0">
                         <pre className="max-h-[400px] overflow-auto rounded-lg bg-muted p-4">
-                          <code>{`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Generated Website</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="logo">Brand</div>
-        <div class="nav-links">
-            <a href="#home">Home</a>
-            <a href="#about">About</a>
-            <a href="#contact">Contact</a>
-        </div>
-    </nav>
-    <main>
-        <h1>Welcome to my website</h1>
-        <p>This is a generated template.</p>
-    </main>
-    <script src="script.js"></script>
-</body>
-</html>`}</code>
+                          <code>{message.files.html}</code>
                         </pre>
                       </TabsContent>
                       <TabsContent value="css" className="mt-0">
                         <pre className="max-h-[400px] overflow-auto rounded-lg bg-muted p-4">
-                          <code>{`/* Your CSS code will appear here */`}</code>
+                          <code>{message.files.css}</code>
                         </pre>
                       </TabsContent>
                       <TabsContent value="js" className="mt-0">
                         <pre className="max-h-[400px] overflow-auto rounded-lg bg-muted p-4">
-                          <code>{`/* Your JavaScript code will appear here */`}</code>
+                          <code>{message.files.js}</code>
                         </pre>
                       </TabsContent>
                     </Tabs>
@@ -157,4 +299,3 @@ export default function Page() {
     </div>
   )
 }
-

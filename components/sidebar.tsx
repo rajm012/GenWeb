@@ -1,4 +1,8 @@
-import { Button } from "@/components/ui/button"
+"use client";
+
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar as SidebarContainer,
   SidebarContent,
@@ -6,36 +10,48 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from "@/components/ui/sidebar"
-import { Clock, Plus } from "lucide-react"
+} from "@/components/ui/sidebar";
+import { Clock, Plus } from "lucide-react";
+
+interface Project {
+  id: string;
+  project_name: string;
+  created_at: string;
+}
 
 export function Sidebar() {
-  const history = [
-    {
-      id: 1,
-      title: "Portfolio Website",
-      description: "A modern dark theme portfolio",
-      date: "2 hours ago",
-    },
-    {
-      id: 2,
-      title: "E-commerce Landing",
-      description: "Product showcase with hero section",
-      date: "Yesterday",
-    },
-    {
-      id: 3,
-      title: "Restaurant Website",
-      description: "Menu and booking system",
-      date: "3 days ago",
-    },
-    {
-      id: 4,
-      title: "Blog Template",
-      description: "Minimalist blog design",
-      date: "1 week ago",
-    },
-  ]
+  const { user, isSignedIn } = useUser();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await fetch("/api/getProjects", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+        const data = await res.json();
+        console.log("Fetched projects:", data);
+
+        if (data.projects) {
+          setProjects(data.projects);
+        } else {
+          setError("No projects found.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+        setError("Failed to load projects.");
+      }
+    };
+
+    if (isSignedIn) {
+      fetchProjects();
+    }
+  }, [isSignedIn, user]);
 
   return (
     <SidebarContainer>
@@ -48,23 +64,27 @@ export function Sidebar() {
         </Button>
       </SidebarHeader>
       <SidebarContent>
-        <div className="px-2 py-4 text-xs font-medium text-muted-foreground">HISTORY</div>
+        <div className="px-2 py-4 text-xs font-medium text-muted-foreground">PREVIOUS PROJECTS</div>
         <SidebarMenu>
-          {history.map((item) => (
-            <SidebarMenuItem key={item.id}>
-              <SidebarMenuButton className="flex flex-col items-start gap-1 p-3">
-                <div className="font-medium">{item.title}</div>
-                <div className="text-xs text-muted-foreground">{item.description}</div>
-                <div className="mt-1 flex items-center text-xs text-muted-foreground">
-                  <Clock className="mr-1 h-3 w-3" />
-                  {item.date}
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {error ? (
+            <p className="px-4 text-red-500 text-sm">{error}</p>
+          ) : projects.length === 0 ? (
+            <p className="px-4 text-muted-foreground text-sm">No projects yet.</p>
+          ) : (
+            projects.map((project) => (
+              <SidebarMenuItem key={project.id}>
+                <SidebarMenuButton className="flex flex-col items-start gap-1 p-3">
+                  <div className="font-medium">{project.project_name}</div>
+                  <div className="mt-1 flex items-center text-xs text-muted-foreground">
+                    <Clock className="mr-1 h-3 w-3" />
+                    {new Date(project.created_at).toLocaleDateString()}
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))
+          )}
         </SidebarMenu>
       </SidebarContent>
     </SidebarContainer>
-  )
+  );
 }
-
