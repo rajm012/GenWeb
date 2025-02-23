@@ -4,23 +4,24 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userInput } = body;
+    const { text } = body;
 
-    if (!userInput) {
+    if (!text) {
       return NextResponse.json({ error: "Missing user input" }, { status: 400 });
     }
-
     // Call Agent.AI Webhook
-    const response = await fetch("https://api-lr.agent.ai/v1/agent/jf5srtnw2sx51m0q/webhook/c0e36640", {
+    const response = await fetch("https://api-lr.agent.ai/v1/agent/cn0yf0xbzsa2550q/webhook/1a98d3b3", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ user_input: userInput }),
+      body: JSON.stringify({ user_input: text }),
     });
 
+    console.log("start")
     const data = await response.json();
-    // console.log(data);
+    console.log("over")
+    console.log(data);
 
     if (!response.ok) {
       throw new Error(data.error || "Failed to fetch AI response");

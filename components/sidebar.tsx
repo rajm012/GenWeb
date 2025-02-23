@@ -14,54 +14,52 @@ import {
 import { Clock, Plus } from "lucide-react";
 
 interface Project {
-  id: string;
-  project_name: string;
+  repoName: string;
+  previewUrl: string;
+  repoUrl: string;
+  input: string;
+  files: any;
+  structureDescription: string;
   created_at: string;
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  loadProject: (project: Project) => void;
+  handleNewProject: () => void;
+}
+
+export function Sidebar({ loadProject, handleNewProject }: SidebarProps) {
+
   const { user, isSignedIn } = useUser();
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const res = await fetch("/api/getProjects", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-        const data = await res.json();
-        console.log("Fetched projects:", data);
-
-        if (data.projects) {
-          setProjects(data.projects);
-        } else {
-          setError("No projects found.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch projects:", error);
-        setError("Failed to load projects.");
+    try {
+      const savedProjects = localStorage.getItem("projects");
+      if (savedProjects) {
+        setProjects(JSON.parse(savedProjects));
       }
-    };
-
-    if (isSignedIn) {
-      fetchProjects();
+    } catch (error) {
+      console.error("Failed to load projects from localStorage:", error);
+      setError("Failed to load projects.");
     }
-  }, [isSignedIn, user]);
+  }, []);
+
+  const handleProjectClick = (project: Project) => {
+    loadProject(project);
+  };
 
   return (
     <SidebarContainer>
       <SidebarHeader className="border-b p-4">
         <div className="mb-2 px-2 text-xl font-semibold">GenWeb</div>
         <div className="mb-4 px-2 text-sm text-muted-foreground">AI-powered website generator</div>
-        <Button className="w-full gap-2">
+        <Button className="w-full gap-2" onClick={handleNewProject}>
           <Plus className="h-4 w-4" />
           New Website
         </Button>
+
       </SidebarHeader>
       <SidebarContent>
         <div className="px-2 py-4 text-xs font-medium text-muted-foreground">PREVIOUS PROJECTS</div>
@@ -70,11 +68,14 @@ export function Sidebar() {
             <p className="px-4 text-red-500 text-sm">{error}</p>
           ) : projects.length === 0 ? (
             <p className="px-4 text-muted-foreground text-sm">No projects yet.</p>
-          ) : (
-            projects.map((project) => (
-              <SidebarMenuItem key={project.id}>
-                <SidebarMenuButton className="flex flex-col items-start gap-1 p-3">
-                  <div className="font-medium">{project.project_name}</div>
+          ) : isSignedIn ? (
+            projects.map((project, index) => (
+              <SidebarMenuItem key={project.input || index}>
+                <SidebarMenuButton
+                  className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                  onClick={() => handleProjectClick(project)}
+                >
+                  <div className="font-medium">{project.input}</div>
                   <div className="mt-1 flex items-center text-xs text-muted-foreground">
                     <Clock className="mr-1 h-3 w-3" />
                     {new Date(project.created_at).toLocaleDateString()}
@@ -82,6 +83,8 @@ export function Sidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))
+          ): (
+            <p className="px-4 text-muted-foreground text-sm">No projects yet.</p>
           )}
         </SidebarMenu>
       </SidebarContent>

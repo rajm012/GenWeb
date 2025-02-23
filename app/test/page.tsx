@@ -1,67 +1,93 @@
-"use client"
+"use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { useUser } from "@clerk/nextjs";
+import { AlertCircle, Check, Lock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useSearchParams } from 'next/navigation';
 
-export default function TestAgentPage() {
-  const [userInput, setUserInput] = useState("");
-  const [response, setResponse] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+type AuthStatus = 'authenticated' | 'needs_auth' | 'error';
+
+const DriveAuthManager: React.FC = () => {
+  const { user } = useUser();
+  const searchParams = useSearchParams();
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const callAgent = async () => {
-    setLoading(true);
-    setError(null);
-    setResponse(null);
+  useEffect(() => {
+    // Check for auth callback parameters
+    const authResult = searchParams.get('auth');
+    if (authResult === 'success') {
+      setAuthStatus('authenticated');
+    } else if (authResult === 'error') {
+      setError(searchParams.get('message') || 'Authentication failed');
+      setAuthStatus('error');
+    }
+  }, [searchParams]);
 
+  const startAuth = async () => {
     try {
-      const res = await fetch("/api/agent", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userInput }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
-
-      setResponse(JSON.stringify(data.response, null, 2)); // ✅ Store formatted JSON response
+      const response = await fetch('http://localhost:8000/start-auth');
+      if (!response.ok) {
+        throw new Error('Failed to start authentication');
+      }
+      const data = await response.json();
+      window.location.href = data.auth_url;
     } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+      setError('Failed to start authentication');
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6">
-      <h1 className="text-2xl font-bold mb-4">Test Your AI Agent</h1>
+    <div className="max-w-2xl mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">Google Drive Document Manager</CardTitle>
+          {user && (
+            <p className="text-sm text-gray-500">Signed in as </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          {/* Authentication Required */}
+          {!authStatus && (
+            <div className="space-y-4">
+              <Alert>
+                <Lock className="h-4 w-4" />
+                <AlertDescription>
+                  One-time authentication required to access Google Drive
+                </AlertDescription>
+              </Alert>
+              <button
+                onClick={startAuth}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Authenticate with Google Drive
+              </button>
+            </div>
+          )}
 
-      <input
-        type="text"
-        className="w-80 p-2 border border-gray-500 rounded bg-gray-800 text-white"
-        placeholder="Describe your web app..."
-        value={userInput}
-        onChange={(e) => setUserInput(e.target.value)}
-      />
+          {/* Authenticated */}
+          {authStatus === 'authenticated' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-green-600">
+                <Check />
+                <span>Successfully authenticated with Google Drive</span>
+              </div>
+            </div>
+          )}
 
-      <button
-        className="mt-4 px-4 py-2 bg-blue-500 rounded text-white hover:bg-blue-600 disabled:opacity-50"
-        onClick={callAgent}
-        disabled={loading || !userInput}
-      >
-        {loading ? "Generating..." : "Send to AI Agent"}
-      </button>
-
-      {error && <p className="mt-4 text-red-500">{error}</p>}
-      
-      {response && (
-        <div className="mt-6 w-full max-w-2xl bg-gray-800 p-4 rounded">
-          <h2 className="text-lg font-semibold">AI Response:</h2>
-          <pre className="text-sm whitespace-pre-wrap">{response}</pre>
-        </div>
-      )}
+          {/* Error */}
+          {authStatus === 'error' && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default DriveAuthManager;

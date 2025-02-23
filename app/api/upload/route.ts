@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     for (const [fileName, content] of Object.entries(files)) {
       fileUrls[fileName] = await uploadFile(userId, fileName, String(content));
     }
-
+    console.log(fileUrls)
     const { error } = await supabaseAdmin
       .from("projects")
       .insert([{ 
