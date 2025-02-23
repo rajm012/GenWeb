@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ message: "Project saved successfully", fileUrls }, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("API route error:", error);
     return NextResponse.json({ 
-      error: error.message || "Internal Server Error",
+      error: error || "Internal Server Error",
       details: error
     }, { status: 500 });
   }

@@ -13,12 +13,19 @@ import {
 } from "@/components/ui/sidebar";
 import { Clock, Plus } from "lucide-react";
 
-interface Project {
+export interface Files {
+  html?: Record<string, string>;
+  css?: Record<string, string>;
+  js?: Record<string, string>;
+  [key: string]: Record<string, string> | undefined;
+}
+
+export interface Project {
   repoName: string;
   previewUrl: string;
   repoUrl: string;
   input: string;
-  files: any;
+  files: Files;
   structureDescription: string;
   created_at: string;
 }
@@ -33,12 +40,13 @@ export function Sidebar({ loadProject, handleNewProject }: SidebarProps) {
   const { user, isSignedIn } = useUser();
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
+  console.log(user);
 
   useEffect(() => {
     try {
       const savedProjects = localStorage.getItem("projects");
       if (savedProjects) {
-        setProjects(JSON.parse(savedProjects));
+        setProjects(JSON.parse(savedProjects) as Project[]);
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage:", error);

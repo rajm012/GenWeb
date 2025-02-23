@@ -13,6 +13,7 @@ import { LandingPage } from "@/components/landing-page";
 import Lottie from "lottie-react";
 import loadingAnimation from "@/public/ai.json";
 import { motion, AnimatePresence } from "framer-motion";
+import { Project } from "@/components/sidebar";
 
 interface Files {
   html: Record<string, string>;
@@ -131,20 +132,25 @@ export default function Page() {
     }
   };
 
-  const loadProject = (project: any) => {
+  const loadProject = (project: Project) => {
     setMessages([
       { role: "user", content: project.input },
       {
         role: "assistant",
         content: "Your project has been generated!",
         code: true,
-        files: project.files,
+        files: {
+          html: project.files?.html || {},
+          css: project.files?.css || {},
+          js: project.files?.js || {},
+          py: project.files?.py || {},
+        },
         repoUrl: project.repoUrl,
         previewUrl: project.previewUrl,
         structureDescription: project.structureDescription,
       },
     ]);
-  };
+  };  
 
   const handleCopy = async (files: Files, type: keyof Files) => {
     try {

@@ -5,7 +5,7 @@ export async function uploadFile(userId: string, fileName: string, content: stri
   const filePath = `${userId}/${fileName}`;
   
   try {
-    const { data, error } = await supabaseAdmin.storage
+    const { error } = await supabaseAdmin.storage
       .from('genweb')
       .upload(filePath, content, {
         upsert: true,

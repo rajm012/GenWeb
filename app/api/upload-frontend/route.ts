@@ -52,7 +52,7 @@ const driveService = google.drive({ version: 'v3', auth });
 const docsService = google.docs({ version: 'v1', auth });
 
 // Helper functions
-function log(message: string, data?: any) {
+function log(message: string, data?: unknown) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${message}`);
   if (data) console.log(JSON.stringify(data, null, 2));
@@ -60,7 +60,7 @@ function log(message: string, data?: any) {
 
 function cleanStructureDescription(description: string): string {
   return description
-    .replace(/[*#`]/g, '') // Only remove *, #, and ` characters
+    .replace(/[*#`]/g, '')
     .trim();
 }
 
@@ -144,7 +144,7 @@ function categorizeFiles(fileContents: FileContent): CategorizedFiles {
 }
 
 // GitHub functions
-async function createGithubRepo(repoName: string, githubUsername: string): Promise<string> {
+async function createGithubRepo(repoName: string): Promise<string> {
   try {
     const response = await octokit.repos.createForAuthenticatedUser({
       name: repoName,
@@ -280,7 +280,7 @@ export async function POST(request: Request) {
     // Create GitHub repository
     const timestamp = new Date().getTime();
     const repoName = `${baseName.toLowerCase().replace(/[^a-z0-9-]/g, '-')}-${timestamp}`;
-    const repoUrl = await createGithubRepo(repoName, GITHUB_USERNAME);
+    const repoUrl = await createGithubRepo(repoName);
 
     // Upload files
     await uploadFiles(repoName, categorizedFiles, GITHUB_USERNAME);
