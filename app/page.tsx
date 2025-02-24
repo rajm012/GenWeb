@@ -10,10 +10,15 @@ import { Bot, Code2, Copy, Github, Loader2, Play, Send } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Sidebar } from "@/components/sidebar";
 import { LandingPage } from "@/components/landing-page";
-import Lottie from "lottie-react";
+// import Lottie from "lottie-react";
 import loadingAnimation from "@/public/ai.json";
 import { motion, AnimatePresence } from "framer-motion";
 import { Project } from "@/components/sidebar";
+import dynamic from 'next/dynamic';
+const LottieComponent = dynamic(() => import('lottie-react'), {
+  ssr: false,
+  loading: () => <div className="w-64 h-64">Loading...</div>
+});
 
 interface Files {
   html: Record<string, string>;
@@ -69,30 +74,46 @@ export default function Page() {
     setShowLanding(false);
   };
 
+  // Add this helper function at the top of your file
+  const saveToLocalStorage = (project: Project) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const existingProjects = JSON.parse(localStorage.getItem("projects") || "[]") as Project[];
+        const updatedProjects = [project, ...existingProjects];
+        localStorage.setItem("projects", JSON.stringify(updatedProjects));
+      } catch (error) {
+        console.error("Failed to save project to localStorage:", error);
+      }
+    }
+  };
+
+  // Then in your handleSubmit function, replace the localStorage section with:
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || !isSignedIn) return;
-  
+
     setProcessingSubmit(true);
     setMessages(prev => [...prev, { role: "user", content: text }]);
-  
+
     try {
       const agentResponse = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-  
+
       if (!agentResponse.ok) {
         throw new Error("Failed to process code with AI");
       }
-  
+
       const agentData = await agentResponse.json();
       const fileNames = agentData.response.response
         .split("\n")
         .map((line: string) => line.split(": ")[1]?.trim())
         .filter(Boolean);
-  
+
       const uploadResponse = await fetch("/api/upload-frontend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,14 +122,14 @@ export default function Page() {
           githubUsername: user?.username || "GenWeb-ai",
         }),
       });
-  
+
       if (!uploadResponse.ok) {
         throw new Error("Failed to upload files");
       }
-  
+
       const data: ResponseData = await uploadResponse.json();
-      
-       // Create new project object
+
+      // Create new project object
       const newProject: Project = {
         repoName: data.repoName,
         previewUrl: data.previewUrl,
@@ -119,21 +140,14 @@ export default function Page() {
           css: {},
           js: {},
           py: {}
-        },        
-        
+        },
+
         structureDescription: data.structureDescription || "",
         created_at: new Date().toISOString()
       };
-  
-      // Save to localStorage
-      try {
-        const existingProjects = JSON.parse(localStorage.getItem("projects") || "[]") as Project[];
-        const updatedProjects = [newProject, ...existingProjects];
-        localStorage.setItem("projects", JSON.stringify(updatedProjects));
-      } catch (error) {
-        console.error("Failed to save project to localStorage:", error);
-      }
-  
+
+      saveToLocalStorage(newProject);
+
       setMessages(prev => [
         ...prev,
         {
@@ -175,14 +189,16 @@ export default function Page() {
         structureDescription: project.structureDescription,
       },
     ]);
-  };  
+  };
 
   const handleCopy = async (files: Files, type: keyof Files) => {
-    try {
-      const content = Object.values(files[type] || {}).join('\n');
-      await navigator.clipboard.writeText(content);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    if (typeof navigator !== 'undefined') {
+      try {
+        const content = Object.values(files[type] || {}).join('\n');
+        await navigator.clipboard.writeText(content);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
     }
   };
 
@@ -203,7 +219,13 @@ export default function Page() {
         content: '👋 Welcome to GenWeb! Paste your ideas to generate website.',
       },
     ]);
-  };  
+  };
+
+  const handlePreview = (url: string) => {
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+  };
 
   return (
     <div className="h-screen w-full">
@@ -217,7 +239,7 @@ export default function Page() {
             className="fixed inset-0 flex items-center justify-center bg-background"
           >
             <div className="w-64 h-64">
-              <Lottie animationData={loadingAnimation} />
+              <LottieComponent animationData={loadingAnimation} />
             </div>
           </motion.div>
         )}
@@ -258,11 +280,10 @@ export default function Page() {
                             <Code2 className="h-4 w-4" />
                           </div>
                         )}
-                        <div className={`rounded-lg px-4 py-2 ${
-                          message.role === "assistant"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-primary text-primary-foreground"
-                        }`}>
+                        <div className={`rounded-lg px-4 py-2 ${message.role === "assistant"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-primary text-primary-foreground"
+                          }`}>
                           <div className="whitespace-pre-wrap">{message.content}</div>
                         </div>
                       </div>
@@ -303,7 +324,7 @@ export default function Page() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(message.previewUrl, '_blank')}
+                                    onClick={() => handlePreview(message.previewUrl!)}
                                   >
                                     <Play className="mr-2 h-4 w-4" /> Preview
                                   </Button>
