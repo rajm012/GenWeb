@@ -51,11 +51,10 @@ export default function Page() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: '👋 Welcome to GenWeb! Paste your formatted code with multiple files separated by "---\n@$ filename" markers.',
+      content: '👋 Welcome to GenWeb! Paste your ideas to generate website.',
     },
   ]);
 
-  // Handle initial loading and auth check
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoading(false);
@@ -73,27 +72,27 @@ export default function Page() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || !isSignedIn) return;
-
+  
     setProcessingSubmit(true);
     setMessages(prev => [...prev, { role: "user", content: text }]);
-
+  
     try {
       const agentResponse = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-
+  
       if (!agentResponse.ok) {
         throw new Error("Failed to process code with AI");
       }
-
+  
       const agentData = await agentResponse.json();
       const fileNames = agentData.response.response
         .split("\n")
         .map((line: string) => line.split(": ")[1]?.trim())
         .filter(Boolean);
-
+  
       const uploadResponse = await fetch("/api/upload-frontend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,13 +101,39 @@ export default function Page() {
           githubUsername: user?.username || "GenWeb-ai",
         }),
       });
-
+  
       if (!uploadResponse.ok) {
         throw new Error("Failed to upload files");
       }
-
+  
       const data: ResponseData = await uploadResponse.json();
-
+      
+       // Create new project object
+      const newProject: Project = {
+        repoName: data.repoName,
+        previewUrl: data.previewUrl,
+        repoUrl: data.repoUrl,
+        input: text,
+        files: {
+          html: {},
+          css: {},
+          js: {},
+          py: {}
+        },        
+        
+        structureDescription: data.structureDescription || "",
+        created_at: new Date().toISOString()
+      };
+  
+      // Save to localStorage
+      try {
+        const existingProjects = JSON.parse(localStorage.getItem("projects") || "[]") as Project[];
+        const updatedProjects = [newProject, ...existingProjects];
+        localStorage.setItem("projects", JSON.stringify(updatedProjects));
+      } catch (error) {
+        console.error("Failed to save project to localStorage:", error);
+      }
+  
       setMessages(prev => [
         ...prev,
         {
@@ -175,7 +200,7 @@ export default function Page() {
     setMessages([
       {
         role: "assistant",
-        content: '👋 Welcome to GenWeb! Paste your formatted code with multiple files separated by "---\n@$ filename" markers.',
+        content: '👋 Welcome to GenWeb! Paste your ideas to generate website.',
       },
     ]);
   };  
@@ -330,7 +355,7 @@ export default function Page() {
                     <Textarea
                       value={text}
                       onChange={(e) => setText(e.target.value)}
-                      placeholder="Paste your code here..."
+                      placeholder="Paste your idea here..."
                       className="min-h-[60px]"
                       rows={1}
                     />

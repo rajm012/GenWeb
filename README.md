@@ -1,37 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+GenWeb
+GenWeb is an AI-powered website builder built with Next.js, designed to streamline web development using modern tools like Clerk for authentication and Supabase for data storage.
 
-## Getting Started
+Getting Started
+To run the development server:
 
-First, run the development server:
-
-```bash
+bash
+Copy
+Edit
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open http://localhost:3000 to view it in your browser. The page auto-updates as you edit files.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Repository Structure
+ruby
+Copy
+Edit
+GenWeb/
+│   README.md
+│   next.config.ts
+│   package.json
+│   tsconfig.json
+│
+├── app/                 
+│   ├── api/              # API routes for backend logic
+│   └── page.tsx          # Main application page
+│
+├── components/          
+│   ├── ui/               # Reusable UI components
+│
+├── hooks/               # Custom React hooks
+├── lib/                 # Helper functions and utilities
+├── public/              # Static assets
+└── styles/              # Global styles
+Features
+Clerk Authentication: Secure and easy-to-integrate user authentication.
+Project Storage: Saves user-created projects in local storage for quick access.
+GitHub Integration: Automatically creates GitHub repositories for user projects.
+Live Preview: Displays a real-time preview of the user's project.
+File Structure Generation: Dynamically generates file structures based on the user's input or idea.
+Google APIs: Utilizes Google APIs for enhanced functionality, such as Drive integration.
+Agent.ai Integration: Uses Agent.ai for advanced AI capabilities, making the website builder smarter and more intuitive.
+Summary
+GenWeb generates complete websites using user inputs, leveraging AI to bring ideas to life. It integrates Next.js for server-side rendering, Supabase for data management, Clerk for authentication, Google APIs, and Agent.ai. The tool provides live previews and automates version control, making web development fast and seamless.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# GenWeb" 
+For more details, visit the GitHub Repository.

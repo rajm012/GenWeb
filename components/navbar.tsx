@@ -11,7 +11,7 @@ export function Navbar() {
         <div className="mr-4 hidden md:flex">
           <SidebarTrigger/>
           <Link className="mr-6 flex items-center space-x-2" href="/">
-            <span className="hidden font-bold sm:inline-block">GenWeb</span>
+            <span className="hidden text-xl font-bold sm:inline-block">GenWeb</span>
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
