@@ -54,7 +54,7 @@ For more details, visit the [GitHub Repository](#).
 
 ## 👥 Co-authors
 
-This project was built by:
+This project was built along with:
 
 - 🧠 [Raj Maurya](https://github.com/rajm012) – Backend + Model Integration
 
